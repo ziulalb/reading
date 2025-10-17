@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Chat · Reading Tracker{% endblock %}
+{% block content %}
+<div class="chat-container">
+  <div class="chat-sidebar">
+    {% for u in usuarios %}
+    <div class="usuario-item" onclick="entrarChatPrivado({{ u.id }})">
+      {% if u.foto_perfil %}
+      <img class="nav-avatar" src="{{ url_for('static', filename='uploads/' ~ u.foto_perfil) }}" alt="avatar">
+      {% endif %}
+      {{ u.username }}
+    </div>
+    {% endfor %}
+  </div>
+  <div>
+    <div id="mensagens" class="chat-messages">
+      {% for m in mensagens %}
+      <div class="mensagem {{ 'mensagem-propria' if m.usuario_id==current_user.id else 'mensagem-outra' }}">
+        <strong>{{ m.autor.username }}</strong>
+        <div>{{ m.conteudo }}</div>
+        <small>{{ m.timestamp.strftime('%H:%M') }}</small>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="chat-input">
+      <input id="input-msg" type="text" placeholder="Digite sua mensagem..." onkeypress="if(event.key==='Enter'){enviarMensagem();}">
+      <button onclick="enviarMensagem()">Enviar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+<script>
+  const socket = io();
+
+  socket.on('nova_mensagem', (msg) => {
+    const el = document.createElement('div');
+    el.className = 'mensagem mensagem-outra';
+    el.innerHTML = `<strong>${msg.usuario}</strong><div>${msg.conteudo}</div><small>${msg.timestamp}</small>`;
+    document.getElementById('mensagens').appendChild(el);
+  });
+
+  function enviarMensagem(){
+    const input = document.getElementById('input-msg');
+    const texto = input.value.trim();
+    if(!texto) return;
+    socket.emit('enviar_mensagem', {conteudo: texto});
+
+    const el = document.createElement('div');
+    el.className = 'mensagem mensagem-propria';
+    el.innerHTML = `<strong>Você</strong><div>${texto}</div><small>agora</small>`;
+    document.getElementById('mensagens').appendChild(el);
+    input.value = '';
+  }
+
+  let chatPrivadoUsuario = null;
+  function entrarChatPrivado(usuarioId){
+    chatPrivadoUsuario = usuarioId;
+    socket.emit('entrar_chat_privado', {usuario_id: usuarioId});
+  }
+
+  socket.on('historico_mensagens', (msgs) => {
+    const container = document.getElementById('mensagens');
+    container.innerHTML = '';
+    msgs.forEach(msg => {
+      const isMine = msg.remetente_id === {{ current_user.id }};
+      const el = document.createElement('div');
+      el.className = 'mensagem ' + (isMine ? 'mensagem-propria' : 'mensagem-outra');
+      el.innerHTML = `<strong>${isMine ? 'Você' : msg.remetente}</strong><div>${msg.conteudo}</div><small>${msg.timestamp}</small>`;
+      container.appendChild(el);
+    });
+  });
+
+  socket.on('nova_mensagem_privada', (msg) => {
+    if(!chatPrivadoUsuario) return; // só exibe quando estiver em sala
+    const isMine = msg.remetente_id === {{ current_user.id }};
+    const el = document.createElement('div');
+    el.className = 'mensagem ' + (isMine ? 'mensagem-propria' : 'mensagem-outra');
+    el.innerHTML = `<strong>${isMine ? 'Você' : msg.remetente}</strong><div>${msg.conteudo}</div><small>${msg.timestamp}</small>`;
+    document.getElementById('mensagens').appendChild(el);
+  });
+</script>
+{% endblock %}
+
+

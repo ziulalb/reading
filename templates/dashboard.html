@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard · Reading Tracker{% endblock %}
+{% block content %}
+<h2 style="margin-bottom: 20px; color: #2c3e50;">Olá, {{ current_user.username }}!</h2>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-busca')">Buscar livros</button>
+    <button class="tab-btn" onclick="switchTab('tab-meus')">Meus livros</button>
+    <button class="tab-btn" onclick="switchTab('tab-registrar')">Registrar leitura</button>
+    <button class="tab-btn" onclick="switchTab('tab-cronometro')">Cronômetro</button>
+    <button class="tab-btn" onclick="switchTab('tab-estatisticas')">Estatísticas</button>
+  </div>
+
+<div id="tab-busca" class="tab-content active">
+    <div class="form-group">
+        <label>Buscar livro</label>
+        <input id="busca-input" type="text" placeholder="Título, autor ou ISBN">
+    </div>
+    <button class="btn btn-primary" onclick="buscarLivros()">Buscar na Google Books</button>
+    <div class="divider">ou adicionar manualmente</div>
+
+    <form id="form-adicionar-manual">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Título</label>
+                <input type="text" name="titulo" required>
+            </div>
+            <div class="form-group">
+                <label>Autor</label>
+                <input type="text" name="autor">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>ISBN</label>
+                <input type="text" name="isbn">
+            </div>
+            <div class="form-group">
+                <label>Total de páginas</label>
+                <input type="number" name="paginas" min="1" required>
+            </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Adicionar</button>
+    </form>
+
+    <div id="resultados-busca" class="resultados-grid"></div>
+</div>
+
+<div id="tab-meus" class="tab-content">
+    {% if livros %}
+    <div class="livros-grid">
+        {% for livro in livros %}
+        <div class="livro-card">
+            <div class="livro-capa">
+                {% if livro.capa_url %}
+                <img src="{{ livro.capa_url }}" alt="{{ livro.titulo }}">
+                {% endif %}
+            </div>
+            <div>
+                <h3>{{ livro.titulo }}</h3>
+                <p style="color:#7f8c8d;">{{ livro.autor }}</p>
+                <p>Páginas: {{ livro.pagina_atual }}/{{ livro.total_paginas }} · {{ livro.progresso_percentual }}%</p>
+                <span class="livro-status {{ 'status-concluido' if livro.status=='concluido' else 'status-lendo' }}">{{ livro.status|capitalize }}</span>
+                <div class="livro-acoes">
+                    <button class="btn-small" onclick="verHistorico({{ livro.id }})">Histórico</button>
+                    <button class="btn-small" onclick="verSessoes({{ livro.id }})">Sessões</button>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <small>Iniciado em: {{ (livro.iniciado_em or livro.created_at).strftime('%d/%m/%Y') }}</small><br>
+                {% if livro.concluido_em %}
+                <small>Concluído em: {{ livro.concluido_em.strftime('%d/%m/%Y') }}</small>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>Você ainda não adicionou livros. Comece pela aba "Buscar livros".</p>
+    </div>
+    {% endif %}
+</div>
+
+<div id="tab-registrar" class="tab-content">
+    <form id="form-registrar-leitura">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Livro</label>
+                <select id="select-livro" name="livro_id" onchange="atualizarUltimaPagina()" required>
+                    <option value="">Selecione</option>
+                    {% for livro in livros %}
+                    <option value="{{ livro.id }}" data-ultima="{{ livro.pagina_atual }}">
+                        {{ livro.titulo }} ({{ livro.pagina_atual }}/{{ livro.total_paginas }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Data</label>
+                <input type="date" name="data" value="{{ (caller_now or none) }}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Página inicial</label>
+                <input id="pag-inicial" type="number" name="pagina_inicial" min="1" required>
+            </div>
+            <div class="form-group">
+                <label>Página final</label>
+                <input type="number" name="pagina_final" min="1" required>
+            </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Registrar</button>
+    </form>
+</div>
+
+<div id="tab-cronometro" class="tab-content">
+    <div class="form-group">
+        <label>Livro</label>
+        <select id="livro-cronometro" onchange="selecionarLivroCrono()">
+            <option value="">Selecione</option>
+            {% for livro in livros %}
+            <option value="{{ livro.id }}" data-ultima="{{ livro.pagina_atual }}">{{ livro.titulo }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="cronometro-display">
+        <div id="tempo-display" class="tempo-grande">00:00:00</div>
+        <div id="tempo-status">Parado</div>
+        <div style="margin-top:15px;">
+            <button id="btn-iniciar" class="btn btn-primary" onclick="iniciarCrono()">Iniciar</button>
+            <button id="btn-pausar" class="btn" style="display:none;" onclick="pausarCrono()">Pausar</button>
+            <button class="btn" onclick="resetarCrono()">Resetar</button>
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label>Última página</label>
+            <input id="ultima-pag-crono" class="input-readonly" type="number" readonly>
+        </div>
+        <div class="form-group">
+            <label>Página final</label>
+            <input id="crono-pag-final" type="number" min="1">
+        </div>
+    </div>
+    <button class="btn btn-primary" onclick="salvarSessaoCrono()">Salvar sessão</button>
+
+    <div id="lista-sessoes"></div>
+</div>
+
+<div id="tab-estatisticas" class="tab-content">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>{{ stats.semana.total_minutos }} min</h3>
+            <p>Últimos 7 dias</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ stats.mes.total_minutos }} min</h3>
+            <p>Últimos 30 dias</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ stats.ano.total_minutos }} min</h3>
+            <p>Últimos 365 dias</p>
+        </div>
+    </div>
+</div>
+
+<div id="modal-historico" class="modal">
+    <div class="modal-content">
+        <span class="modal-close" onclick="fecharModal()">×</span>
+        <h3>Histórico</h3>
+        <div id="conteudo-historico"></div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Preencher a data de hoje no formulário de registro
+  const inputData = document.querySelector('input[name="data"]');
+  if (inputData) inputData.value = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}
+
+

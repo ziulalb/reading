@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Perfil · Reading Tracker{% endblock %}
+{% block content %}
+<div class="perfil-banner">
+    {% if current_user.banner %}
+    <img src="{{ url_for('static', filename='uploads/' ~ current_user.banner) }}" alt="banner">
+    {% endif %}
+  </div>
+  <div class="perfil-foto">
+    {% if current_user.foto_perfil %}
+    <img src="{{ url_for('static', filename='uploads/' ~ current_user.foto_perfil) }}" alt="perfil">
+    {% endif %}
+  </div>
+  <div style="margin-top: 20px;">
+    <h2>{{ current_user.nome_completo or current_user.username }}</h2>
+    <p style="color:#7f8c8d;">{{ current_user.bio or 'Sem bio ainda.' }}</p>
+  </div>
+
+  <form method="POST" enctype="multipart/form-data" style="margin-top: 20px;">
+    <div class="form-group">
+      <label>Nome completo</label>
+      <input type="text" name="nome_completo" value="{{ current_user.nome_completo or '' }}">
+    </div>
+    <div class="form-group">
+      <label>Bio</label>
+      <textarea name="bio" rows="4">{{ current_user.bio or '' }}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Foto de perfil</label>
+        <input type="file" name="foto_perfil" accept="image/*">
+      </div>
+      <div class="form-group">
+        <label>Banner</label>
+        <input type="file" name="banner" accept="image/*">
+      </div>
+    </div>
+    <button class="btn btn-primary" type="submit">Salvar</button>
+  </form>
+{% endblock %}
+
+

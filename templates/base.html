@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Reading Tracker{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+    <script>
+        // Helper para fechar mensagens flash
+        function closeFlash(el){ el.parentElement.remove(); }
+    </script>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'error' if category == 'error' else 'success' }}">
+            <span>{{ message }}</span>
+            <button onclick="closeFlash(this)">×</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+</head>
+<body>
+    <nav class="navbar">
+        <div>
+            <a class="nav-link" href="{{ url_for('dashboard') }}">📚 Reading Tracker</a>
+        </div>
+        <div class="navbar-menu">
+            {% if current_user.is_authenticated %}
+            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a class="nav-link" href="{{ url_for('chat') }}">Chat</a>
+            <a class="nav-link" href="{{ url_for('perfil') }}">
+                {% if current_user.foto_perfil %}
+                <img class="nav-avatar" src="{{ url_for('static', filename='uploads/' ~ current_user.foto_perfil) }}" alt="avatar">
+                {% endif %}
+                Perfil
+            </a>
+            <a class="nav-link btn-logout" href="{{ url_for('logout') }}">Sair</a>
+            {% else %}
+            <a class="nav-link" href="{{ url_for('login') }}">Entrar</a>
+            {% endif %}
+        </div>
+    </nav>
+    <main class="main-content">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+
+
