@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: reading-tracker
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_BOOKS_API_KEY
+        sync: false
+    healthCheckPath: /
+    
+  - type: pserv
+    name: reading-tracker-db
+    env: postgresql
+    plan: free
+    
+  - type: redis
+    name: reading-tracker-redis
+    plan: free

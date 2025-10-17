@@ -6,8 +6,16 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-    # Banco de dados
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'reading_tracker.db')
+    # Banco de dados - PostgreSQL para produção, SQLite para desenvolvimento
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        # Render usa DATABASE_URL com postgres://, mas SQLAlchemy precisa postgresql://
+        if DATABASE_URL.startswith('postgres://'):
+            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+        SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    else:
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'reading_tracker.db')
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Upload de arquivos
@@ -21,4 +29,11 @@ class Config:
 
     # Session
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
-    SOCKETIO_ASYNC_MODE = 'threading'
+    
+    # Socket.IO - Redis para produção, threading para desenvolvimento
+    REDIS_URL = os.environ.get('REDIS_URL')
+    if REDIS_URL:
+        SOCKETIO_ASYNC_MODE = 'redis'
+        SOCKETIO_MESSAGE_QUEUE = REDIS_URL
+    else:
+        SOCKETIO_ASYNC_MODE = 'threading'
