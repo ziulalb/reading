@@ -17,7 +17,10 @@ services:
   - type: pserv
     name: reading-tracker-db
     plan: free
+    startCommand: postgres
+    ipAllowList: []
     
   - type: redis
     name: reading-tracker-redis
     plan: free
+    ipAllowList: []
