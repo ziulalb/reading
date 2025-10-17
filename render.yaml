@@ -18,7 +18,10 @@ services:
     name: reading-tracker-db
     env: postgresql
     plan: free
+    startCommand: postgres
+    ipAllowList: []
     
   - type: redis
     name: reading-tracker-redis
     plan: free
+    ipAllowList: []
